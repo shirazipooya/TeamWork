@@ -46,6 +46,7 @@ def blizzard_2_legacy(
         }
     )
     
+    
     df["date"] = pd.to_datetime(df["date"]).dt.strftime("%Y%m%d")
     
     # TODO: Aren't GDUs Recalculated Later? This may be Unnecessary Here.
