@@ -9,9 +9,6 @@ historical = pd.read_csv(
     index_col=None
 )
 
-# Run specific fields.
-loc_historical_unique = historical.drop_duplicates(subset="Field")
-
 # Parametrize
 crop_mechanistic = "Corn"
 
