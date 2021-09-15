@@ -37,7 +37,7 @@ def blizzard_2_legacy(
         
     df = df.rename(
         columns={
-            "ID": "locationld",
+            "ID": "locationId",
             "time": "date",
             "precipitation": "precip",
             "maximum_temperature": "maxtemp",
@@ -101,6 +101,66 @@ def calc_rain_score(
         nbc_rd = 4
     
     return nbc_rd
+
+
+def get_rc_res(
+    day: int, 
+    fungicide: pd.DataFrame, 
+    residual: pd.DataFrame
+) -> float:
+    """
+    Calculate Fungicide effective residual?
+
+    Parameters
+    ----------
+    day : int
+        Days since planting
+    fungicide : pd.DataFrame
+        columns: `spray_number`, `spray_moment`, `spray_eff`
+    fungicide_residual : pd.DataFrame
+        Crop-specific lookup table
+
+    Returns
+    -------
+    fungicide_efficacy_residual : float
+    """
+    fungicide_efficacy_residual = 1.0
+    fungicide["V4"] = fungicide["spray_moment"] + 7
+    flag = (day > fungicide["spray_moment"]) & (day <= fungicide["V4"])
+    if flag.any():
+        eff_res = fungicide["spray_eff"][flag]
+        fungicide_efficacy_residual = residual * eff_res
+    return fungicide_efficacy_residual
+
+
+def get_spray(
+    day: int, 
+    daily_rainfall: float, 
+    fungicide: pd.DataFrame
+) -> float:
+    """
+    Calculate flow residual?
+
+    Parameters
+    ----------
+    day : int
+        Days since planting
+    daily_rainfall : float
+        daily precipitation in mm
+    fungicide : pd.DataFrame
+        columns: `spray_number`, `spray_moment`, `spray_eff`
+
+    Returns
+    -------
+    flow_residual : float
+    """
+    flow_residual = 0.0
+    fungicide["V4"] = fungicide["spray_moment"] + 7
+    flag = (day > fungicide["spray_moment"]) & (day <= fungicide["V4"])
+
+    if flag.any():
+        flow_residual = daily_rainfall
+    return flow_residual
 
 
 def r_stella(
@@ -264,38 +324,6 @@ def r_stella(
     results_day["RcT"] = np.interp(results_day["Temp"], rc_t_input[0], rc_t_input[1])
     results_day["RcA"] = np.interp(results_day["DVS8"], rc_a_input[0], rc_a_input[1])
 
-
-
-
-    def get_rc_res(
-        day: int, 
-        fungicide: pd.DataFrame, 
-        residual: pd.DataFrame
-    ) -> float:
-        """
-        Calculate Fungicide effective residual?
-
-        Parameters
-        ----------
-        day : int
-            Days since planting
-        fungicide : pd.DataFrame
-            columns: `spray_number`, `spray_moment`, `spray_eff`
-        fungicide_residual : pd.DataFrame
-            Crop-specific lookup table
-
-        Returns
-        -------
-        fungicide_efficacy_residual : float
-        """
-        fungicide_efficacy_residual = 1.0
-        fungicide["V4"] = fungicide["spray_moment"] + 7
-        flag = (day > fungicide["spray_moment"]) & (day <= fungicide["V4"])
-        if flag.any():
-            eff_res = fungicide["spray_eff"][flag]
-            fungicide_efficacy_residual = residual * eff_res
-        return fungicide_efficacy_residual
-
     if is_fungicide:
         results_day["Residual"] = results_day["ResSpray"]
         results_day["RcFCur"] = 1
@@ -328,32 +356,6 @@ def r_stella(
     results_day["RLEX"] = results_day["RRLEX"] * results_day["I"] * results_day["COFR"]
     results_day["RDI"] = 0.000100004821661
     results_day["REM"] = 0.999948211789
-
-
-    def get_spray(day: int, daily_rainfall: float, fungicide: pd.DataFrame) -> float:
-        """
-        Calculate flow residual?
-
-        Parameters
-        ----------
-        day : int
-            Days since planting
-        daily_rainfall : float
-            daily precipitation in mm
-        fungicide : pd.DataFrame
-            columns: `spray_number`, `spray_moment`, `spray_eff`
-
-        Returns
-        -------
-        flow_residual : float
-        """
-        flow_residual = 0.0
-        fungicide["V4"] = fungicide["spray_moment"] + 7
-        flag = (day > fungicide["spray_moment"]) & (day <= fungicide["V4"])
-
-        if flag.any():
-            flow_residual = daily_rainfall
-        return flow_residual
 
     if is_fungicide:
         daily_rainfall = one_field_weather["precip"].iloc[day - 1]
@@ -493,12 +495,26 @@ def r_stella(
         # Problems!!!!  # TODO: Problems!?!?
         results_day["RDI"] = results_day["I"] * results_day["RRDD"]
         results_day["RDL"] = results_day["L"] * results_day["RRDD"]
+        
+        # print("-------------------------------------------------------------------------")
+        # print(f"day: {day} - results_day['ip']: {results_day['ip']} - results_day['REM'] old: {results_day['REM']}")
+        
         if day > results_day["ip"]:
             # Note: math.floor(x) is not a direct replacement for math.ceil(x) - 1
             # where x is a whole number.
-            results_day["REM"] = results_list[math.ceil(day - results_day["ip"]) - 1][
-                "RT"
-            ]
+            
+            # print(f"---> len results_list: {len(results_list)} - index: {math.ceil(day - results_day['ip']) - 1}")
+            # print(f"---> len results_list: {len(results_list)} - index: {math.floor(day - results_day['ip'])}")
+            # print(f"---> len results_list: {len(results_list)} - index: {math.ceil(day - results_day['ip']) - 2}")
+            
+            # print("-------------------------------------------------------------------------")
+
+            try:
+                results_day["REM"] = results_list[math.ceil(day - results_day["ip"]) - 1]["RT"]
+            except:
+                results_day["REM"] = results_list[math.ceil(day - results_day["ip"]) - 2]["RT"]
+                
+            
         # ===================================================
         if is_fungicide:
             daily_rainfall = one_field_weather["precip"].iloc[day - 1]

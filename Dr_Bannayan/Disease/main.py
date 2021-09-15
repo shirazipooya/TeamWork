@@ -4,32 +4,39 @@ import itertools
 import numpy as np
 import pandas as pd
 
-from disease_mechanistic_functions import blizzard_2_legacy, run_locationId_r_stella
+from functions.disease_mechanistic_functions import *
 
 # Load auxiliary files
- 
+
 # Corn tuning parameters
-ip_t_cof_corn = pd.read_excel('Parameters_Corn.xlsx', engine="openpyxl", sheet_name=0, header=None)
-p_t_cof_corn = pd.read_excel('Parameters_Corn.xlsx', engine="openpyxl", sheet_name=1, header=None)
-rc_t_input_corn = pd.read_excel('Parameters_Corn.xlsx', engine="openpyxl", sheet_name=2, header=None)
-dvs_8_input_corn = pd.read_excel('Parameters_Corn.xlsx', engine="openpyxl", sheet_name=3, header=None)
-rc_a_input_corn = pd.read_excel('Parameters_Corn.xlsx', engine="openpyxl", sheet_name=4, header=None)
-fungicide_corn = pd.read_excel('Parameters_Corn.xlsx', engine="openpyxl", sheet_name=6, header=None)
-fungicide_residual_corn = pd.read_excel('Parameters_Corn.xlsx', engine="openpyxl", sheet_name=7, header=None)
+Parameters_Corn_Path = "Dr_Bannayan/Disease/data/Parameters_Corn.xlsx"
+Parameters_Soy_Path = "Dr_Bannayan/Disease/data/Parameters_Soy.xlsx"
+
+ip_t_cof_corn = pd.read_excel(Parameters_Corn_Path, engine="openpyxl", sheet_name=0, header=None)
+p_t_cof_corn = pd.read_excel(Parameters_Corn_Path, engine="openpyxl", sheet_name=1, header=None)
+rc_t_input_corn = pd.read_excel(Parameters_Corn_Path, engine="openpyxl", sheet_name=2, header=None)
+dvs_8_input_corn = pd.read_excel(Parameters_Corn_Path, engine="openpyxl", sheet_name=3, header=None)
+rc_a_input_corn = pd.read_excel(Parameters_Corn_Path, engine="openpyxl", sheet_name=4, header=None)
+fungicide_corn = pd.read_excel(Parameters_Corn_Path, engine="openpyxl", sheet_name=6, header=None)
+fungicide_residual_corn = pd.read_excel(Parameters_Corn_Path, engine="openpyxl", sheet_name=7, header=None)
 
 # Soybean tuning parameters
-ip_t_cof_soy = pd.read_excel('Parameters_Soy.xlsx', engine="openpyxl", sheet_name=0, header=None)
-p_t_cof_soy = pd.read_excel('Parameters_Soy.xlsx', engine="openpyxl", sheet_name=1, header=None)
-rc_t_input_soy = pd.read_excel('Parameters_Soy.xlsx', engine="openpyxl", sheet_name=2, header=None)
-dvs_8_input_soy = pd.read_excel('Parameters_Soy.xlsx', engine="openpyxl", sheet_name=3, header=None)
-rc_a_input_soy = pd.read_excel('Parameters_Soy.xlsx', engine="openpyxl", sheet_name=4, header=None)
-fungicide_soy = pd.read_excel('Parameters_Soy.xlsx', engine="openpyxl", sheet_name=6, header=None)
-fungicide_residual_soy = pd.read_excel('Parameters_Soy.xlsx', engine="openpyxl", sheet_name=7, header=None)
+ip_t_cof_soy = pd.read_excel(Parameters_Soy_Path, engine="openpyxl", sheet_name=0, header=None)
+p_t_cof_soy = pd.read_excel(Parameters_Soy_Path, engine="openpyxl", sheet_name=1, header=None)
+rc_t_input_soy = pd.read_excel(Parameters_Soy_Path, engine="openpyxl", sheet_name=2, header=None)
+dvs_8_input_soy = pd.read_excel(Parameters_Soy_Path, engine="openpyxl", sheet_name=3, header=None)
+rc_a_input_soy = pd.read_excel(Parameters_Soy_Path, engine="openpyxl", sheet_name=4, header=None)
+fungicide_soy = pd.read_excel(Parameters_Soy_Path, engine="openpyxl", sheet_name=6, header=None)
+fungicide_residual_soy = pd.read_excel(Parameters_Soy_Path, engine="openpyxl", sheet_name=7, header=None)
 
 
 # Historical Data
 # read pre-calculated historical data (summarized) - for specific fields
-historical = pd.read_csv('./csv_files/Historical_Calculated_Data_Merged.csv', encoding="latin-1", index_col=0)
+historical = pd.read_csv(
+    "Dr_Bannayan/Disease/data/Historical_Calculated_Data_Merged.csv",
+    encoding="utf-8",
+    index_col=None
+)
 # TD changed name for MD
 historical["Area"] = historical["Area"].str.replace("TD", "MD")
 loc_historical_unique = historical.drop_duplicates(subset="Field")
@@ -41,6 +48,7 @@ crop_mechanistic_list = [
     "Corn",  # Disease: "Northern Leaf Blight"  
     "Soy",  # Disease: "Asian Soybean Rust"
 ]
+
 number_applications_list = [
     0,
     1,
@@ -60,6 +68,7 @@ date_list = ["2018-10-31"]  # Only 2018 for now.
 
 # Run specific fields.
 fields_to_run = loc_historical_unique["Field"].unique()
+# fields_to_run = [40745]
 
 
 # This is just for the parametrized version. Will need to be adjusted to something more reasonable.
@@ -84,9 +93,6 @@ for crop_mechanistic, number_applications, genetic_mechanistic, date in itertool
         fungicide_inputs = pd.DataFrame()
     
     
-    
-
-
     #################### HISTORICAL DATA MANIPULATION ############
     model_origin = "2017-12-31" if crop_mechanistic == "Corn" else "2018-01-01"  # TODO: Why?
     model_origin = pd.to_datetime(model_origin)
@@ -153,17 +159,21 @@ for crop_mechanistic, number_applications, genetic_mechanistic, date in itertool
             p_opt = p_opt,
             inocp = 10,
             rrlex_par = 0.01,
-            rc_opt_par = rc_opt_par, https://conference.ifas.ufl.edu/pest/index.html
+            rc_opt_par = rc_opt_par,
             ip_opt = 28,
-            isFungicide = using_fungicide,
+            is_fungicide = using_fungicide,
             fungicide = fungicide_inputs,
             fungicide_residual = fungicide_residual_soy
         )
     spray_code = f"-{'-'.join(fungicide_inputs['spray_moment'].astype(str).values)}" if using_fungicide else ""
-    csv_path = f"/mnt/py_results/{crop_mechanistic}_{number_applications}-app{spray_code}_{genetic_mechanistic}_{date}.csv"
+    csv_path = f"Dr_Bannayan/Disease/result/{crop_mechanistic}_{number_applications}-app{spray_code}_{genetic_mechanistic}_{date}.csv"
 
     print(csv_path)
-    print(results.head())
-    results.sort_values("locationId").to_csv(csv_path, index=None)    
+    print(results)
+    
+    if results.empty:
+        continue
+    else:
+        results.sort_values("locationId").to_csv(csv_path, index=None)    
 
 
