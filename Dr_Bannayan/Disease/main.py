@@ -174,6 +174,4 @@ for crop_mechanistic, number_applications, genetic_mechanistic, date in itertool
     if results.empty:
         continue
     else:
-        results.sort_values("locationId").to_csv(csv_path, index=None)    
-
-
+        results.sort_values("locationId").to_csv(csv_path, index=None)

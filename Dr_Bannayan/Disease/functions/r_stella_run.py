@@ -2,49 +2,56 @@ import pandas as pd
 import datetime
 
 
-from disease_mechanistic_functions import blizzard_2_legacy, r_stella
+from disease_mechanistic_functions import *
 
 
 # -----------------------------------------------------------------------------
-Parameters_Corn_Path = "Dr_Bannayan/Disease/data/Parameters_Corn.xlsx"
+Parameters_Soy_Path = "Dr_Bannayan/Disease/data/Parameters_Soy.xlsx"
 
 ip_t_cof_corn = pd.read_excel(
-    Parameters_Corn_Path,
+    Parameters_Soy_Path,
     engine="openpyxl",
     sheet_name=0,
     header=None
 )
 
 p_t_cof_corn = pd.read_excel(
-    Parameters_Corn_Path,
+    Parameters_Soy_Path,
     engine="openpyxl",
     sheet_name=1,
     header=None
 )
 
 rc_t_input_corn = pd.read_excel(
-    Parameters_Corn_Path,
+    Parameters_Soy_Path,
     engine="openpyxl",
     sheet_name=2,
     header=None
 )
 
 dvs_8_input_corn = pd.read_excel(
-    Parameters_Corn_Path,
+    Parameters_Soy_Path,
     engine="openpyxl",
     sheet_name=3,
     header=None
 )
 
 rc_a_input_corn = pd.read_excel(
-    Parameters_Corn_Path,
+    Parameters_Soy_Path,
     engine="openpyxl",
     sheet_name=4,
     header=None
 )
 
+fungicide_soy = pd.read_excel(
+    Parameters_Soy_Path,
+    engine="openpyxl",
+    sheet_name=6,
+    header=None
+)
+
 fungicide_residual_corn = pd.read_excel(
-    Parameters_Corn_Path,
+    Parameters_Soy_Path,
     engine="openpyxl",
     sheet_name=7,
     header=None
@@ -68,11 +75,12 @@ historical = pd.read_csv(
     index_col=None
 )
 
-crop_mechanistic = "Corn"
+crop_mechanistic = "Soy"
 
-fields_to_run = [40745]
+fields_to_run = ["SD02"]
 
-model_origin = "2017-12-31" if crop_mechanistic == "Corn" else "2018-01-01"
+# model_origin = "2017-12-31" if crop_mechanistic == "Corn" else "2018-01-01"
+model_origin = "2017-12-31" if crop_mechanistic == "Corn" else "2017-12-31"
 model_origin = pd.to_datetime(model_origin)
 
 historical_input = historical[(historical["Field"].isin(fields_to_run)) & (historical["Crop"] == crop_mechanistic)].copy()
@@ -197,4 +205,7 @@ field_results, n_day = r_stella(
 )
 # -----------------------------------------------------------------------------
 
-print(1)
+print(field_results)
+print(n_day)
+
+print("stop")

@@ -512,7 +512,7 @@ def r_stella(
             try:
                 results_day["REM"] = results_list[math.ceil(day - results_day["ip"]) - 1]["RT"]
             except:
-                results_day["REM"] = results_list[math.ceil(day - results_day["ip"]) - 2]["RT"]
+                results_day["REM"] = results_list[math.ceil(day - results_day["ip"]) - 1]["RT"]
                 
             
         # ===================================================
