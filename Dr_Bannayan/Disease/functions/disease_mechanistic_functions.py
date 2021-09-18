@@ -336,6 +336,7 @@ def r_stella(
         fung_prod = results_day["RcFCur"] * results_day["FungEffecRes"]
     else:
         fung_prod = 1
+        
     results_day["Rc"] = (
         results_day["RcOpt"]
         * results_day["RcT"]
@@ -343,14 +344,18 @@ def r_stella(
         * results_day["Rc_W"]
         * fung_prod
     )
+    
     results_day["COFR"] = 1 - (results_day["DIS"] / (2 * results_day["H"]))
+    
     results_day["Agg"] = 1
+    
     ri_series.iloc[0] = (
         results_day["Rc"]
         * results_day["I"]
         * np.power(results_day["COFR"], results_day["Agg"])
         + 1
     )
+    
     results_day["RRSEN"] = 0.002307
     results_day["RSEN"] = results_day["RRDD"] + results_day["RRSEN"] * results_day["H"]
     results_day["RLEX"] = results_day["RRLEX"] * results_day["I"] * results_day["COFR"]
@@ -384,6 +389,7 @@ def r_stella(
         )
         results_day["AUDPC"] += results_day["RAUPC"]
         results_day["GDUsum"] += results_day["RTinc"]
+        
         if day > 140:
             # This cuts off the model 140 days after planting.
             for col in set(output_columns) - {"I", "L", "AUDPC", "GDUsum"}:
@@ -391,6 +397,7 @@ def r_stella(
             results_list.append(results_day)
             rt_count = rt_count[: len(results_list) + 1]
             break
+        
         results_day["H"] += (
             results_day["RG"]
             - ri_series.iloc[day - 2]
@@ -404,41 +411,56 @@ def r_stella(
 
         if is_fungicide:
             results_day["ResSpray"] += results_day["FlowRes"]
+            
         results_day["Temp"] = one_field_weather["Temperature"].iloc[day - 1]
+        
         results_day["ip"] = ip_opt * np.interp(
             results_day["Temp"], ip_t_cof[0], ip_t_cof[1]
         )
+        
         results_day["p"] = p_opt / np.interp(
             results_day["Temp"], p_t_cof[0].values, p_t_cof[1].values
         )
+        
         results_day["CumuLeak"] = results_day["LeakL"] + results_day["LeakI"]
+        
         results_day["DIS"] = (
             results_day["R"]
             + results_day["I"]
             + results_day["CumuLeak"]
             + results_day["L"]
         )
+        
         results_day["TOTSITES"] = (
             results_day["HSEN"] + results_day["H"] + results_day["DIS"]
         )
+        
         results_day["Sev"] = results_day["DIS"] / results_day["TOTSITES"]
+        
         results_day["DVS8"] = np.interp(
             results_day["GDUsum"], dvs_8_input[0], dvs_8_input[1]
         )
+        
         results_day["RAUPC"] = results_day["Sev"] if results_day["DVS8"] < 7 else 0
+        
         results_day["GDU"] = results_day["Temp"] - 14
+        
         results_day["RTinc"] = results_day["GDU"]
+        
         results_day["RG"] = (
             results_day["RRG"]
             * results_day["H"]
             * (1 - (results_day["TOTSITES"] / results_day["SITEmax"]))
         )
+        
         results_day["Rc_W"] = calc_rain_score(
             day=day, one_field_precip_bool=one_field_weather["Rain"]
         )
+        
         results_day["RcT"] = np.interp(
             results_day["Temp"], rc_t_input[0], rc_t_input[1]
         )
+        
         results_day["RcA"] = np.interp(
             results_day["DVS8"], rc_a_input[0], rc_a_input[1]
         )
@@ -450,22 +472,29 @@ def r_stella(
                 ]["spray_eff"].iloc[0]
             except IndexError:
                 results_day["FungEffcCur"] = 1
+                
             results_day["RcFCur"] = (
                 results_day["FungEffcCur"]
                 if pd.notnull(results_day["FungEffcCur"])
                 else 1
             )
+            
             results_day["Residual"] = np.interp(
                 results_day["ResSpray"], fungicide_residual[0], fungicide_residual[1]
             )
+            
             results_day["RcRes"] = results_day["FungEffcCur"] * results_day["Residual"]
+            
             results_day["FungEffecRes"] = (
                 results_day["RcRes"] if pd.notnull(results_day["FungEffcCur"]) else 1
             )
+            
             results_day["EffRes"] = results_day["FungEffcCur"]
+            
             fung_prod = results_day["RcFCur"] * results_day["FungEffecRes"]
         else:
             fung_prod = 1
+            
         results_day["Rc"] = (
             results_day["RcOpt"]
             * results_day["RcT"]
@@ -475,18 +504,22 @@ def r_stella(
         )
 
         start = inocp if day > 10 else 0
+        
         results_day["COFR"] = 1 - (
             results_day["DIS"] / (results_day["DIS"] + results_day["H"])
         )
+        
         ri_series.iloc[day - 1] = (
             results_day["Rc"]
             * results_day["I"]
             * np.power(results_day["COFR"], results_day["Agg"])
             + start
         )
+        
         results_day["RSEN"] = (
             results_day["RRDD"] + results_day["RRSEN"] * results_day["H"]
         )
+        
         results_day["RLEX"] = (
             results_day["RRLEX"] * results_day["I"] * results_day["COFR"]
         )
@@ -496,37 +529,29 @@ def r_stella(
         results_day["RDI"] = results_day["I"] * results_day["RRDD"]
         results_day["RDL"] = results_day["L"] * results_day["RRDD"]
         
-        # print("-------------------------------------------------------------------------")
-        # print(f"day: {day} - results_day['ip']: {results_day['ip']} - results_day['REM'] old: {results_day['REM']}")
-        
         if day > results_day["ip"]:
             # Note: math.floor(x) is not a direct replacement for math.ceil(x) - 1
             # where x is a whole number.
-            
-            # print(f"---> len results_list: {len(results_list)} - index: {math.ceil(day - results_day['ip']) - 1}")
-            # print(f"---> len results_list: {len(results_list)} - index: {math.floor(day - results_day['ip'])}")
-            # print(f"---> len results_list: {len(results_list)} - index: {math.ceil(day - results_day['ip']) - 2}")
-            
-            # print("-------------------------------------------------------------------------")
-
-            try:
-                results_day["REM"] = results_list[math.ceil(day - results_day["ip"]) - 1]["RT"]
-            except:
-                results_day["REM"] = results_list[math.ceil(day - results_day["ip"]) - 1]["RT"]
+            results_day["REM"] = results_list[math.ceil(day - results_day["ip"]) - 1]["RT"]
                 
             
         # ===================================================
         if is_fungicide:
             daily_rainfall = one_field_weather["precip"].iloc[day - 1]
+            
             results_day["FlowRes"] = get_spray(day, daily_rainfall, fungicide)
 
         rt_count[day - 1] = round(results_day["p"])
+        
         results_day["RT"] = ri_series[rt_count == 0].sum()
 
         # Counting
         rt_count -= 1
+        
         results_list.append(results_day)
+        
     results = pd.DataFrame.from_dict(results_list)
+    
     results["RI"] = ri_series
     # Match R's case sorted for comparison.
     # results = results[sorted(results.columns, key=str.casefold)]
@@ -591,13 +616,17 @@ def run_locationId_r_stella(
     results : pd.DataFrame
         aggregated results by field.
     """
+    
     all_fields_weather["Temperature"] = all_fields_weather[["maxtemp", "mintemp"]].mean(
         axis=1
     )
+    
     all_fields_weather["Rain"] = (
         all_fields_weather["precip"] >= 2
     )  # Set rain as boolean
+    
     result_list = []
+    
     for i, (locale, one_field_weather) in enumerate(
         all_fields_weather.groupby("locationId")
     ):
@@ -607,9 +636,11 @@ def run_locationId_r_stella(
         if len(one_field_weather) == 0:
             print(f"Location {i} Id = {locale}  NOT USED. No dates in range.")
             continue
+        
         one_field_weather["Day"] = (
             one_field_weather["DOY"] - one_field_weather["DOY"].iloc[0]
         ).dt.days + 1
+        
         field_results, n_day = r_stella(
             one_field_weather=one_field_weather,
             ip_t_cof=ip_t_cof,
@@ -628,19 +659,31 @@ def run_locationId_r_stella(
         )
         # Output information
         start_date = one_field_weather["date"].iloc[0]
+        
         end_date = one_field_weather["date"].iloc[n_day - 1]
+        
         result_location = {}
+        
         result_location["locationId"] = locale
+        
         result_location["Date1"] = start_date
+        
         result_location["Date2"] = end_date
+        
         result_location["N_Days"] = (
             pd.to_datetime(end_date) - pd.to_datetime(start_date)
         ).days
+        
         result_location["latitude"] = one_field_weather["latitude"].iloc[0]
+        
         result_location["longitude"] = one_field_weather["longitude"].iloc[0]
+        
         result_location["Sev50%"] = field_results["Sev"].median()
+        
         result_location["SevMAX"] = field_results["Sev"].max()
+        
         nonzero_sev = field_results[field_results["Sev"] != 0]["Sev"]
+        
         if len(nonzero_sev):
             # note: The R version of this code was using `auc`,
             # but bypassing the `roc` calculation. `auc` seems to use a
@@ -648,6 +691,9 @@ def run_locationId_r_stella(
             result_location["AUC"] = np.trapz(nonzero_sev)
         else:
             result_location["AUC"] = 0
+        
         result_list.append(result_location)
+        
     results = pd.DataFrame.from_dict(result_list)
+    
     return results

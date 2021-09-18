@@ -8,35 +8,35 @@ from disease_mechanistic_functions import *
 # -----------------------------------------------------------------------------
 Parameters_Soy_Path = "Dr_Bannayan/Disease/data/Parameters_Soy.xlsx"
 
-ip_t_cof_corn = pd.read_excel(
+ip_t_cof_soy = pd.read_excel(
     Parameters_Soy_Path,
     engine="openpyxl",
     sheet_name=0,
     header=None
 )
 
-p_t_cof_corn = pd.read_excel(
+p_t_cof_soy = pd.read_excel(
     Parameters_Soy_Path,
     engine="openpyxl",
     sheet_name=1,
     header=None
 )
 
-rc_t_input_corn = pd.read_excel(
+rc_t_input_soy = pd.read_excel(
     Parameters_Soy_Path,
     engine="openpyxl",
     sheet_name=2,
     header=None
 )
 
-dvs_8_input_corn = pd.read_excel(
+dvs_8_input_soy = pd.read_excel(
     Parameters_Soy_Path,
     engine="openpyxl",
     sheet_name=3,
     header=None
 )
 
-rc_a_input_corn = pd.read_excel(
+rc_a_input_soy = pd.read_excel(
     Parameters_Soy_Path,
     engine="openpyxl",
     sheet_name=4,
@@ -50,14 +50,13 @@ fungicide_soy = pd.read_excel(
     header=None
 )
 
-fungicide_residual_corn = pd.read_excel(
+fungicide_residual_soy = pd.read_excel(
     Parameters_Soy_Path,
     engine="openpyxl",
     sheet_name=7,
     header=None
 )
 # -----------------------------------------------------------------------------
-
 
 
 # -----------------------------------------------------------------------------
@@ -67,11 +66,10 @@ date = datetime.datetime.strptime(date_list[0], "%Y-%m-%d").strftime("%Y%m%d")
 # -----------------------------------------------------------------------------
 
 
-
 # -----------------------------------------------------------------------------
 historical = pd.read_csv(
     "Dr_Bannayan/Disease/data/Historical_Calculated_Data_Merged.csv",
-    encoding="utf-8", 
+    encoding="utf-8",
     index_col=None
 )
 
@@ -83,9 +81,11 @@ fields_to_run = ["SD02"]
 model_origin = "2017-12-31" if crop_mechanistic == "Corn" else "2017-12-31"
 model_origin = pd.to_datetime(model_origin)
 
-historical_input = historical[(historical["Field"].isin(fields_to_run)) & (historical["Crop"] == crop_mechanistic)].copy()
+historical_input = historical[(historical["Field"].isin(fields_to_run)) & (
+    historical["Crop"] == crop_mechanistic)].copy()
 historical_input["DOY"] = pd.to_timedelta(historical_input["DOY"], unit="d")
-historical_input["time"] = (historical_input["DOY"] + model_origin).dt.strftime('%Y-%m-%d')
+historical_input["time"] = (
+    historical_input["DOY"] + model_origin).dt.strftime('%Y-%m-%d')
 historical_input["ID"] = historical["Field"]
 
 historical_input_blizz_prev = blizzard_2_legacy(
@@ -94,7 +94,8 @@ historical_input_blizz_prev = blizzard_2_legacy(
 )
 
 historical_input_blizz_prev = historical_input_blizz_prev[
-    ['locationId', 'latitude', 'longitude', 'date', 'DOY', 'precip', 'maxtemp', 'mintemp', 'avgwindspeed', 'GDU']
+    ['locationId', 'latitude', 'longitude', 'date', 'DOY',
+        'precip', 'maxtemp', 'mintemp', 'avgwindspeed', 'GDU']
 ]
 
 historical_input_blizz_prev_modified = historical_input_blizz_prev.copy()
@@ -110,7 +111,8 @@ historical_input_blizz = pd.concat(
     ignore_index=True
 )
 
-historical_input_blizz = historical_input_blizz.drop_duplicates(subset=["locationId", "date"])
+historical_input_blizz = historical_input_blizz.drop_duplicates(
+    subset=["locationId", "date"])
 
 historical_input_blizz["Temperature"] = historical_input_blizz[["maxtemp", "mintemp"]].mean(
     axis=1
@@ -122,18 +124,18 @@ historical_input_blizz["Rain"] = (
 
 for i, (locale, one_field_weather) in enumerate(historical_input_blizz.groupby("locationId")):
     print(f"Running Location {i} Id = {locale}")
-    
-    one_field_weather = one_field_weather[one_field_weather["date"] >= date].copy()
-    
+
+    one_field_weather = one_field_weather[one_field_weather["date"] >= date].copy(
+    )
+
     if len(one_field_weather) == 0:
         print(f"Location {i} Id = {locale}  NOT USED. No Dates in Range.")
         continue
-    
+
     one_field_weather["Day"] = (
         one_field_weather["DOY"] - one_field_weather["DOY"].iloc[0]
     ).dt.days + 1
 # -----------------------------------------------------------------------------
-
 
 
 # -----------------------------------------------------------------------------
@@ -160,7 +162,6 @@ else:
 # -----------------------------------------------------------------------------
 
 
-
 # -----------------------------------------------------------------------------
 fungicide_inputs_full = pd.DataFrame()
 fungicide_inputs_full["spray_number"] = [1, 2, 3]
@@ -174,7 +175,7 @@ number_applications_list = [
     3,
 ]
 
-number_applications = number_applications_list[1]
+number_applications = number_applications_list[2]
 
 if number_applications > 0:
     using_fungicide = True
@@ -185,27 +186,25 @@ else:
 # -----------------------------------------------------------------------------
 
 
-
 # -----------------------------------------------------------------------------
 field_results, n_day = r_stella(
     one_field_weather=one_field_weather,
-    ip_t_cof=ip_t_cof_corn,
-    p_t_cof=p_t_cof_corn,
-    rc_t_input=rc_t_input_corn,
-    dvs_8_input=dvs_8_input_corn,
-    rc_a_input=rc_a_input_corn,
+
+    ip_t_cof=ip_t_cof_soy,
+    p_t_cof=p_t_cof_soy,
+    rc_t_input=rc_t_input_soy,
+    dvs_8_input=dvs_8_input_soy,
+    rc_a_input=rc_a_input_soy,
+    fungicide_residual=fungicide_residual_soy,
+
     inocp=10,
-    p_opt=p_opt,
     rc_opt_par=0.267,
-    rrlex_par=rrlex_par,
     ip_opt=14,
+
+    p_opt=p_opt,
+    rrlex_par=rrlex_par,
+
     is_fungicide=using_fungicide,
     fungicide=fungicide_inputs,
-    fungicide_residual=fungicide_residual_corn,
 )
 # -----------------------------------------------------------------------------
-
-print(field_results)
-print(n_day)
-
-print("stop")

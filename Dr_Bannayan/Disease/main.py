@@ -63,12 +63,12 @@ genetic_mechanistic_list = [
     "Resistant",
 ]
 
+
 # Planting date
 date_list = ["2018-10-31"]  # Only 2018 for now.
 
 # Run specific fields.
 fields_to_run = loc_historical_unique["Field"].unique()
-# fields_to_run = [40745]
 
 
 # This is just for the parametrized version. Will need to be adjusted to something more reasonable.
@@ -94,7 +94,7 @@ for crop_mechanistic, number_applications, genetic_mechanistic, date in itertool
     
     
     #################### HISTORICAL DATA MANIPULATION ############
-    model_origin = "2017-12-31" if crop_mechanistic == "Corn" else "2018-01-01"  # TODO: Why?
+    model_origin = "2017-12-31" if crop_mechanistic == "Corn" else "2017-12-31"  # TODO: Why?
     model_origin = pd.to_datetime(model_origin)
     loc_historical = loc_historical_unique[loc_historical_unique["Crop"] == crop_mechanistic]
     historical_input = historical[historical["Field"].isin(fields_to_run) & (historical["Crop"] == crop_mechanistic)].copy()
@@ -168,10 +168,11 @@ for crop_mechanistic, number_applications, genetic_mechanistic, date in itertool
     spray_code = f"-{'-'.join(fungicide_inputs['spray_moment'].astype(str).values)}" if using_fungicide else ""
     csv_path = f"Dr_Bannayan/Disease/result/{crop_mechanistic}_{number_applications}-app{spray_code}_{genetic_mechanistic}_{date}.csv"
 
-    print(csv_path)
     print(results)
     
     if results.empty:
         continue
     else:
         results.sort_values("locationId").to_csv(csv_path, index=None)
+
+print("Finish")
