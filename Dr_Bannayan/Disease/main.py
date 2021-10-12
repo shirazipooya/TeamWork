@@ -80,6 +80,8 @@ fungicide_inputs_full["spray_eff"] = [0.5, 0.5, 0.5]  # min 0, max 1
 
 ################### RUN MODEL #############################
 
+all_results = pd.DataFrame()
+
 for crop_mechanistic, number_applications, genetic_mechanistic, date in itertools.product(crop_mechanistic_list, number_applications_list, genetic_mechanistic_list, date_list):
     print(crop_mechanistic, number_applications, genetic_mechanistic, date)
     
@@ -165,14 +167,29 @@ for crop_mechanistic, number_applications, genetic_mechanistic, date in itertool
             fungicide = fungicide_inputs,
             fungicide_residual = fungicide_residual_soy
         )
-    spray_code = f"-{'-'.join(fungicide_inputs['spray_moment'].astype(str).values)}" if using_fungicide else ""
-    csv_path = f"Dr_Bannayan/Disease/result/{crop_mechanistic}_{number_applications}-app{spray_code}_{genetic_mechanistic}_{date}.csv"
+        
+    # spray_code = f"-{'-'.join(fungicide_inputs['spray_moment'].astype(str).values)}" if using_fungicide else ""
+    # csv_path = f"Dr_Bannayan/Disease/result/{crop_mechanistic}_{number_applications}-app{spray_code}_{genetic_mechanistic}_{date}.csv"
 
-    print(results)
+    results["CropMechanistic"] = crop_mechanistic
+    results["NumberApplications"] = number_applications
+    results["GeneticMechanistic"] = genetic_mechanistic
+    results["PlantingDate"] = datetime.datetime.strptime(date, "%Y-%m-%d").strftime("%Y%m%d")  
     
-    if results.empty:
-        continue
-    else:
-        results.sort_values("locationId").to_csv(csv_path, index=None)
+    all_results = pd.concat([all_results, results])
+    
+    # if results.empty:
+    #     continue
+    # else:
+    #     results.sort_values("locationId").to_csv(csv_path, index=None)
 
-print("Finish")
+all_results = all_results[[
+    'locationId', 'CropMechanistic', 'NumberApplications', 
+    'GeneticMechanistic', 'PlantingDate', 'Date1', 'Date2',
+    'N_Days', 'latitude', 'longitude', 'Sev50%', 'SevMAX', 'AUC'
+]]
+
+csv_path = f"Dr_Bannayan/Disease/result/results.csv"
+all_results.sort_values(
+    by=["locationId", "NumberApplications"]
+).to_csv(csv_path, index=None)
