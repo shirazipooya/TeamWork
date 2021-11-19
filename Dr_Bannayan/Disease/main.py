@@ -41,6 +41,8 @@ historical = pd.read_csv(
 historical["Area"] = historical["Area"].str.replace("TD", "MD")
 loc_historical_unique = historical.drop_duplicates(subset="Field")
 
+historical = historical[(historical["Area"] == "Breeding") & (historical["Field"] == "SD02")]
+
 
 ################### MOCKED USER INPUTS #############################
 # Parametrize
@@ -148,6 +150,9 @@ for crop_mechanistic, number_applications, genetic_mechanistic, date in itertool
             is_fungicide = using_fungicide,
             fungicide = fungicide_inputs,
             fungicide_residual = fungicide_residual_corn,
+            crop_mechanistic = crop_mechanistic,
+            number_applications = number_applications,
+            genetic_mechanistic = genetic_mechanistic        
         )
     else:
         results = run_locationId_r_stella(
@@ -165,9 +170,12 @@ for crop_mechanistic, number_applications, genetic_mechanistic, date in itertool
             ip_opt = 28,
             is_fungicide = using_fungicide,
             fungicide = fungicide_inputs,
-            fungicide_residual = fungicide_residual_soy
+            fungicide_residual = fungicide_residual_soy,
+            crop_mechanistic = crop_mechanistic,
+            number_applications = number_applications,
+            genetic_mechanistic = genetic_mechanistic 
         )
-        
+            
     # spray_code = f"-{'-'.join(fungicide_inputs['spray_moment'].astype(str).values)}" if using_fungicide else ""
     # csv_path = f"Dr_Bannayan/Disease/result/{crop_mechanistic}_{number_applications}-app{spray_code}_{genetic_mechanistic}_{date}.csv"
 
@@ -183,11 +191,11 @@ for crop_mechanistic, number_applications, genetic_mechanistic, date in itertool
     # else:
     #     results.sort_values("locationId").to_csv(csv_path, index=None)
 
-all_results = all_results[[
-    'locationId', 'CropMechanistic', 'NumberApplications', 
-    'GeneticMechanistic', 'PlantingDate', 'Date1', 'Date2',
-    'N_Days', 'latitude', 'longitude', 'Sev50%', 'SevMAX', 'AUC'
-]]
+# all_results = all_results[[
+#     'locationId', 'CropMechanistic', 'NumberApplications', 
+#     'GeneticMechanistic', 'PlantingDate', 'Date1', 'Date2',
+#     'N_Days', 'latitude', 'longitude', 'Sev50%', 'SevMAX', 'AUC'
+# ]]
 
 csv_path = f"Dr_Bannayan/Disease/result/results.csv"
 all_results.sort_values(

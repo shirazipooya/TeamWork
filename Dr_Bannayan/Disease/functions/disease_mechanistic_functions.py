@@ -574,6 +574,9 @@ def run_locationId_r_stella(
     is_fungicide: bool = False,
     fungicide: Optional[pd.DataFrame] = None,
     fungicide_residual: Optional[pd.DataFrame] = None,
+    crop_mechanistic: Optional[str] = None,
+    number_applications: Optional[int] = None,
+    genetic_mechanistic: Optional[str] = None, 
 ) -> pd.DataFrame:
     """
     Calculates disease severity from weather data and crop-specific tuning parameters.
@@ -680,7 +683,7 @@ def run_locationId_r_stella(
         
         result_location["Sev50%"] = field_results["Sev"].median()
         
-        result_location["SevMAX"] = field_results["Sev"].max()
+        result_location["SevMAX"] = field_results["Sev"].max()        
         
         nonzero_sev = field_results[field_results["Sev"] != 0]["Sev"]
         
@@ -691,8 +694,35 @@ def run_locationId_r_stella(
             result_location["AUC"] = np.trapz(nonzero_sev)
         else:
             result_location["AUC"] = 0
+            
+        one_field_weather_selected = one_field_weather.iloc[0:140, :]  
+        
+        result_location["maxtempMAX"] = one_field_weather_selected["maxtemp"].max()
+        result_location["maxtempMIN"] = one_field_weather_selected["maxtemp"].min()
+        result_location["maxtempMEAN"] = one_field_weather_selected["maxtemp"].mean()        
+        result_location["maxtempGREATER40"] = (one_field_weather_selected["maxtemp"] >= 40).sum() 
+        
+        result_location["mintempMAX"] = one_field_weather_selected["mintemp"].max()
+        result_location["mintempMIN"] = one_field_weather_selected["mintemp"].min()
+        result_location["mintempMEAN"] = one_field_weather_selected["mintemp"].mean()        
+        result_location["mintempSMALLER10"] = (one_field_weather_selected["mintemp"] <= 10).sum()
+        
+        result_location["TemperatureMAX"] = one_field_weather_selected["Temperature"].max()
+        result_location["TemperatureMIN"] = one_field_weather_selected["Temperature"].min()
+        result_location["TemperatureMEAN"] = one_field_weather_selected["Temperature"].mean()
+
+        result_location["avgwindspeedMAX"] = one_field_weather_selected["avgwindspeed"].max()
+        result_location["avgwindspeedMIN"] = one_field_weather_selected["avgwindspeed"].min()
+        result_location["avgwindspeedMEAN"] = one_field_weather_selected["avgwindspeed"].mean()
+        
+        result_location["precipMAX"] = one_field_weather_selected["precip"].max()
+        result_location["precipSUM"] = one_field_weather_selected["precip"].sum()
+        result_location["precipMEAN"] = one_field_weather_selected["precip"].mean()        
+        result_location["precipGREATER4mm"] = (one_field_weather_selected["precip"] >= 4).sum()
         
         result_list.append(result_location)
+        
+        field_results.to_csv(f"Dr_Bannayan/Disease/result/{locale}-{crop_mechanistic}-{number_applications}-{genetic_mechanistic}.csv")
         
     results = pd.DataFrame.from_dict(result_list)
     
