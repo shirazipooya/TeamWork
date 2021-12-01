@@ -719,7 +719,15 @@ def run_locationId_r_stella(
         result_location["precipSUM"] = one_field_weather_selected["precip"].sum()
         result_location["precipMEAN"] = one_field_weather_selected["precip"].mean()        
         result_location["precipGREATER4mm"] = (one_field_weather_selected["precip"] >= 4).sum()
-        
+
+
+        for col in field_results.columns:
+            result_location[f"{col}_MIN"] = field_results[col].min()
+            result_location[f"{col}_MEAN"] = field_results[col].mean()
+            result_location[f"{col}_MEDIAN"] = field_results[col].median()
+            result_location[f"{col}_MAX"] = field_results[col].max()
+
+
         result_list.append(result_location)
         
         field_results.to_csv(f"Dr_Bannayan/Disease/result/{locale}-{crop_mechanistic}-{number_applications}-{genetic_mechanistic}.csv")
