@@ -11,28 +11,32 @@ Translated to Python by Peter Carlson
 Note: This is a minimal translation. It has not been optimized for Python.
 """
 
-from typing import Dict, Optional, Tuple, Union
+from typing import Dict, Optional, Tuple, Union, List
 import math
 
 import numpy as np
 import pandas as pd
+import datetime
+import itertools
 
 
-def blizzard_2_legacy(
+
+# -----------------------------------------------------------------------------
+# Preprocess Weather Data and Calculates Growing Degree Units
+# -----------------------------------------------------------------------------
+
+def preprocess_weather_data(
     df: pd.DataFrame,
-    crop: str
 ) -> pd.DataFrame:
     
     """
-    Preprocess Blizzard Weather Data and Calculates Growing Degree Units.
+    Preprocess Weather Data and Calculates Growing Degree Units.
 
     Args:
-        df (pd.DataFrame): Blizzard Weather Data.
-        
-        crop (str): "Corn or "Soy".
+        df (pd.DataFrame): Weather Data.
 
     Returns:
-        pd.DataFrame: Blizzard Weather Data with Renamed Columns, datetime 'date', and GDUs Calculated.
+        pd.DataFrame: Weather Data with Renamed Columns, datetime 'date', and GDUs Calculated.
     """
         
     df = df.rename(
@@ -45,25 +49,42 @@ def blizzard_2_legacy(
             "wind_speed": "avgwindspeed",
         }
     )
-    
-    
+        
     df["date"] = pd.to_datetime(df["date"]).dt.strftime("%Y%m%d")
     
-    # TODO: Aren't GDUs Recalculated Later? This may be Unnecessary Here.
+    df["GDU"] = np.where(
+        df['Crop'] == "Corn",
+        (df["maxtemp"] + df["mintemp"]) / 2 - 10.0,
+        np.nan
+    )
     
-    if crop == "Corn":
-        df["GDU"] = (df["maxtemp"] + df["mintemp"]) / 2 - 10.0
-        df["GDU"] = df["GDU"].clip(10, 30)
+    df["GDU"] = np.where(
+        df['Crop'] == "Soy",
+        (df["maxtemp"] + df["mintemp"]) / 2 - 14.0,
+        df["GDU"]
+    )
     
-    elif crop == "Soy":
-        df["GDU"] = (df["maxtemp"] + df["mintemp"]) / 2 - 14.0
-        # df["GDU"] = df["GDU"].clip(14, 40) 
-        # TODO: Check Why This Is Commented Out!
+    df["GDU"] = np.where(
+        df['Crop'] == "Corn",
+        df["GDU"].clip(10, 30),
+        df["GDU"]
+    )
+    
+    df["GDU"] = np.where(
+        df['Crop'] == "Soy",
+        df["GDU"].clip(14, 40) ,
+        df["GDU"]
+    )
     
     df = df[df["GDU"].notnull()]
     
     return df
 
+
+
+# -----------------------------------------------------------------------------
+# Calculates a Score (1-4) of Antecedent Rain Conditions
+# -----------------------------------------------------------------------------
 
 def calc_rain_score(
     day: int,
@@ -103,6 +124,11 @@ def calc_rain_score(
     return nbc_rd
 
 
+
+# -----------------------------------------------------------------------------
+# Calculate Fungicide Effective Residual
+# -----------------------------------------------------------------------------
+
 def get_rc_res(
     day: int, 
     fungicide: pd.DataFrame, 
@@ -133,6 +159,10 @@ def get_rc_res(
     return fungicide_efficacy_residual
 
 
+# -----------------------------------------------------------------------------
+# Calculate Flow Residual
+# -----------------------------------------------------------------------------
+
 def get_spray(
     day: int, 
     daily_rainfall: float, 
@@ -162,6 +192,10 @@ def get_spray(
         flow_residual = daily_rainfall
     return flow_residual
 
+
+# -----------------------------------------------------------------------------
+# Calculates Disease Severity From Weather Data And Crop Specific Tuning Parameters
+# -----------------------------------------------------------------------------
 
 def r_stella(
     one_field_weather: pd.DataFrame,
@@ -563,6 +597,12 @@ def r_stella(
     return results, day
 
 
+
+# -----------------------------------------------------------------------------
+# Calculates Disease Severity From Weather Data And Crop Specific Tuning Parameters
+# Several Location
+# -----------------------------------------------------------------------------
+
 def run_locationId_r_stella(
     all_fields_weather: pd.DataFrame,
     date: str,
@@ -581,7 +621,8 @@ def run_locationId_r_stella(
     fungicide_residual: Optional[pd.DataFrame] = None,
     crop_mechanistic: Optional[str] = None,
     number_applications: Optional[int] = None,
-    genetic_mechanistic: Optional[str] = None, 
+    genetic_mechanistic: Optional[str] = None,
+    path_result: str = None
 ) -> pd.DataFrame:
     """
     Calculates disease severity from weather data and crop-specific tuning parameters.
@@ -638,7 +679,6 @@ def run_locationId_r_stella(
     for i, (locale, one_field_weather) in enumerate(
         all_fields_weather.groupby("locationId")
     ):
-        # print(f"Running location {i} Id = {locale}")
         one_field_weather = one_field_weather[one_field_weather["date"] >= date].copy()
         # Next iteration if date is not related in input file
         if len(one_field_weather) == 0:
@@ -735,8 +775,256 @@ def run_locationId_r_stella(
 
         result_list.append(result_location)
         
-        field_results.to_csv(f"Dr_Bannayan/Disease/result/{locale}-{crop_mechanistic}-{number_applications}-{genetic_mechanistic}-{date}.csv")
+        if path_result is not None:
+            field_results.to_csv(f"{path_result}/{locale}-{crop_mechanistic}-{number_applications}-{genetic_mechanistic}-{date}.csv")
         
     results = pd.DataFrame.from_dict(result_list)
     
     return results
+
+
+
+
+# -----------------------------------------------------------------------------
+# Read Location Data
+# -----------------------------------------------------------------------------
+
+def location_data(
+    historical_data_path: str,
+    model_origin: str,
+    add_year: bool = True,
+    fields_to_run: List[str] = None,
+    crop_mechanistic = "Corn",
+) -> pd.DataFrame:
+    
+    """
+    Read Location Data
+
+    Parameters
+    ----------
+    historical_data_path : str
+        Path to Daily Weather Dataset. Necessary columns:
+            `ID` : field identifier
+            `latitude` : DD
+            `longitude` : DD
+            `DOY` : Julian day
+            `maximum_temperature` : Degrees C
+            `minimum_temperature` : Degrees C
+            `wind_speed` : m/s
+            `precipitation` : mm
+            `precipitation_severity` : 
+            `Crop`
+            `Area`
+            `Field`
+            
+    model_origin : str
+        Date Origin
+        
+    add_year : bool
+        Add Another Year Data
+        
+    fields_to_run : List[str]
+        Select Specific Fields
+        
+    crop_mechanistic_list : str
+        Crop Name.
+        
+    Returns
+    -------
+    results : pd.DataFrame
+        Daily Weather Dataset.
+    """
+    
+    data = pd.read_csv(
+        historical_data_path,
+        encoding="utf-8",
+        index_col=None
+    )
+    
+    if fields_to_run is not None:
+        data = data[data["Field"].isin(fields_to_run)]        
+    
+    if crop_mechanistic is not None:
+        data = data[data["Crop"] == crop_mechanistic]        
+    
+    model_origin = pd.to_datetime(model_origin)
+    
+    data["DOY"] = pd.to_timedelta(data["DOY"], unit="d")
+    
+    data["time"] = (data["DOY"] + model_origin).dt.strftime('%Y-%m-%d')
+    
+    
+    if add_year:
+        
+        data_new = data.copy()
+        
+        data_new["time"] = (
+            pd.to_datetime(data_new["time"]) + pd.Timedelta(365, "d")
+        ).dt.strftime("%Y%m%d")
+        
+        data = pd.concat([data, data_new], axis=0, ignore_index=True)
+        
+        data = data.drop_duplicates(subset=["ID", "time", "Crop", "Area", "Field"]).reset_index(drop=True).sort_values(["ID", "time"])
+       
+    return data    
+ 
+    
+    
+# -----------------------------------------------------------------------------
+# Read Corp Parameters
+# -----------------------------------------------------------------------------
+
+def corp_parameters(
+    crop_mechanistic: str = "Corn",
+    crop_parameters_path: str = None,
+) -> Dict:
+    
+    para = ["ip_t_cof", "p_t_cof", "rc_t_input", "dvs_8_input", "rc_a_input", "fungicide", "fungicide_residual"]
+      
+    crop_para = dict()
+        
+    if crop_parameters_path is not None:
+        for p in para:
+            crop_para[p] = pd.read_excel(crop_parameters_path, engine="openpyxl", sheet_name=p, header=None)
+
+    return crop_para
+
+
+
+# -----------------------------------------------------------------------------
+# Required Parameters
+# -----------------------------------------------------------------------------
+
+def required_parameters(
+    p_opt: List[float] = [7, 10, 14],
+    rc_opt_par: List[float] = [0.35, 0.25, 0.15],
+    rrlex_par: List[float] = [0.1, 0.01, .0001],
+    spray_number: List[int] = [1, 2, 3],
+    spray_moment: List[int] = [30, 45, 60],
+    spray_eff: List[float] = [0.5, 0.5, 0.5]
+) -> dict:
+      
+    para = dict()
+    
+    para["fungicide_inputs_full"] = pd.DataFrame(
+        {
+            "spray_number": spray_number,
+            "spray_moment": spray_moment,
+            "spray_eff": spray_eff
+        }
+    )
+    
+    para["genetic_mechanistic_para"] = {
+        
+        "Susceptible" : {
+            "p_opt" : p_opt[0],
+            "rc_opt_par" : rc_opt_par[0],
+            "rrlex_par" : rrlex_par[0]
+        },
+        
+        "Moderate" : {
+            "p_opt" : p_opt[1],
+            "rc_opt_par" : rc_opt_par[1],
+            "rrlex_par" : rrlex_par[1]
+        },
+        
+        "Resistant" : {
+            "p_opt" : p_opt[2],
+            "rc_opt_par" : rc_opt_par[2],
+            "rrlex_par" : rrlex_par[2]
+        }
+        
+    }
+     
+    return para
+
+
+
+# -----------------------------------------------------------------------------
+# Calculate Disease Severity
+# -----------------------------------------------------------------------------
+def calculate_disease_severity(
+    
+    historical_data_path: str,
+    model_origin: str,
+    add_year: bool = True,
+    fields_to_run: List[str] = None,
+    
+    crop_mechanistic: str = "Corn",
+    planting_date_list: List[str] = ["2019-01-20"],
+    crop_parameters_path: str = None,
+       
+    number_applications_list: List[int] = [0, 1, 2, 3],
+    genetic_mechanistic_list: List[str] = ["Susceptible", "Moderate", "Resistant"],
+    
+    required_para = None,
+    
+    path_result = "result"
+):
+    
+    all_results = pd.DataFrame()
+    
+    data = location_data(
+        historical_data_path = historical_data_path,
+        model_origin = model_origin,
+        add_year = add_year,
+        fields_to_run = fields_to_run,
+        crop_mechanistic = crop_mechanistic,
+    )
+    
+    data = preprocess_weather_data(data)        
+
+    data = data[
+        ['locationId', 'latitude', 'longitude', 'date', 'DOY', 'precip', 'maxtemp', 'mintemp', 'avgwindspeed', 'GDU']
+    ]
+    
+    crop_para = corp_parameters(
+        crop_mechanistic = crop_mechanistic,
+        crop_parameters_path = crop_parameters_path,
+    )
+    
+    planting_date_list = [datetime.datetime.strptime(dt, "%Y-%m-%d").strftime("%Y%m%d") for dt in planting_date_list]
+    
+    fungicide_inputs_full = required_para["fungicide_inputs_full"]    
+
+    for number_applications, genetic_mechanistic, date in itertools.product(number_applications_list, genetic_mechanistic_list, planting_date_list):
+
+        if number_applications > 0:
+            using_fungicide = True
+            fungicide_inputs = fungicide_inputs_full[fungicide_inputs_full["spray_number"] <= number_applications]
+        else:
+            using_fungicide = False
+            fungicide_inputs = pd.DataFrame()
+            
+
+        results = run_locationId_r_stella(
+            all_fields_weather = data,
+            date = date,
+            ip_t_cof = crop_para["ip_t_cof"],
+            p_t_cof = crop_para["p_t_cof"],
+            rc_t_input = crop_para["rc_t_input"],
+            rc_a_input = crop_para["rc_a_input"],
+            dvs_8_input = crop_para["dvs_8_input"],
+            p_opt = required_para["genetic_mechanistic_para"][genetic_mechanistic]["p_opt"],
+            inocp = 10,
+            rrlex_par = required_para["genetic_mechanistic_para"][genetic_mechanistic]["rrlex_par"],
+            rc_opt_par = required_para["genetic_mechanistic_para"][genetic_mechanistic]["rc_opt_par"],
+            ip_opt = 14,
+            is_fungicide = using_fungicide,
+            fungicide = fungicide_inputs,
+            fungicide_residual = crop_para["fungicide_residual"],
+            crop_mechanistic = crop_mechanistic,
+            number_applications = number_applications,
+            genetic_mechanistic = genetic_mechanistic,
+            path_result = path_result
+        )
+
+        results["CropMechanistic"] = crop_mechanistic
+        results["NumberApplications"] = number_applications
+        results["GeneticMechanistic"] = genetic_mechanistic
+        results["PlantingDate"] = date 
+        
+        all_results = pd.concat([all_results, results])
+    
+    return all_results
+

@@ -33,7 +33,7 @@ fungicide_residual_soy = pd.read_excel(Parameters_Soy_Path, engine="openpyxl", s
 # Historical Data
 # read pre-calculated historical data (summarized) - for specific fields
 historical = pd.read_csv(
-    "Dr_Bannayan/Disease/data/Historical_Calculated_Data_Merged.csv",
+    "Dr_Bannayan/Disease/data/final_corn.csv",
     encoding="utf-8",
     index_col=None
 )
@@ -41,7 +41,7 @@ historical = pd.read_csv(
 historical["Area"] = historical["Area"].str.replace("TD", "MD")
 loc_historical_unique = historical.drop_duplicates(subset="Field")
 
-historical = historical[(historical["Area"] == "Breeding") & (historical["Field"] == "SD02")]
+# historical = historical[(historical["Area"] == "Breeding") & (historical["Field"] == "SD02")]
 
 
 ################### MOCKED USER INPUTS #############################
@@ -67,7 +67,7 @@ genetic_mechanistic_list = [
 
 
 # Planting date
-date_list = ["2018-10-31"]  # Only 2018 for now.
+date_list = ["2019-01-20", "2019-02-20", "2019-03-20"]  # Only 2018 for now.
 
 # Run specific fields.
 fields_to_run = loc_historical_unique["Field"].unique()
@@ -98,7 +98,7 @@ for crop_mechanistic, number_applications, genetic_mechanistic, date in itertool
     
     
     #################### HISTORICAL DATA MANIPULATION ############
-    model_origin = "2017-12-31" if crop_mechanistic == "Corn" else "2017-12-31"  # TODO: Why?
+    model_origin = "2018-12-31" if crop_mechanistic == "Corn" else "2018-12-31"  # TODO: Why?
     model_origin = pd.to_datetime(model_origin)
     loc_historical = loc_historical_unique[loc_historical_unique["Crop"] == crop_mechanistic]
     historical_input = historical[historical["Field"].isin(fields_to_run) & (historical["Crop"] == crop_mechanistic)].copy()
@@ -119,7 +119,7 @@ for crop_mechanistic, number_applications, genetic_mechanistic, date in itertool
         rc_opt_par = 0.15
         rrlex_par = 0.0001
 
-    historical_input_blizz_prev = blizzard_2_legacy(historical_input, crop=crop_mechanistic)
+    historical_input_blizz_prev = preprocess_weather_data(historical_input, crop=crop_mechanistic)
     historical_input_blizz_prev = historical_input_blizz_prev[
         ['locationId', 'latitude', 'longitude', 'date', 'DOY', 'precip', 'maxtemp', 'mintemp', 'avgwindspeed', 'GDU']
     ]
@@ -198,6 +198,7 @@ for crop_mechanistic, number_applications, genetic_mechanistic, date in itertool
 # ]]
 
 csv_path = f"Dr_Bannayan/Disease/result/results.csv"
+print(all_results)
 all_results.sort_values(
     by=["locationId", "NumberApplications"]
 ).to_csv(csv_path, index=None)
