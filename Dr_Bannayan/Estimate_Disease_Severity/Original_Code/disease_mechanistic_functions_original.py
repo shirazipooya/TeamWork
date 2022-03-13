@@ -11,6 +11,7 @@
 
 from typing import Dict, Optional, Tuple, Union
 import math
+import datetime
 
 import numpy as np
 import pandas as pd
@@ -109,6 +110,7 @@ def r_stella(
     is_fungicide: bool = False,
     fungicide: pd.DataFrame = pd.DataFrame(),
     fungicide_residual: pd.DataFrame = pd.DataFrame(),
+    obs_planting_delta: int = 140,
 ) -> Tuple[pd.DataFrame, int]:
     
     """
@@ -366,7 +368,7 @@ def r_stella(
         )
         results_day["AUDPC"] += results_day["RAUPC"]
         results_day["GDUsum"] += results_day["RTinc"]
-        if day > 140:
+        if day > obs_planting_delta:
             # This cuts off the model 140 days after planting.
             for col in set(output_columns) - {"I", "L", "AUDPC", "GDUsum"}:
                 results_day[col] = 0
@@ -504,7 +506,7 @@ def r_stella(
 
 def run_locationId_r_stella(
     all_fields_weather: pd.DataFrame,
-    date: str,
+    info: pd.DataFrame,
     ip_t_cof: pd.DataFrame,
     p_t_cof: pd.DataFrame,
     rc_t_input: pd.DataFrame,
@@ -570,6 +572,13 @@ def run_locationId_r_stella(
     for i, (locale, one_field_weather) in enumerate(
         all_fields_weather.groupby("locationId")
     ):
+        
+        date = info.loc[info["Field"] == locale, "planting_date"].values[0]
+        
+        obs_planting_delta = info.loc[info["Field"] == locale, "obs_planting_delta"].values[0]
+        
+        date = pd.to_datetime(date).strftime("%Y%m%d")
+
         # print(f"Running location {i} Id = {locale}")
         one_field_weather = one_field_weather[one_field_weather["date"] >= date].copy()
         # Next iteration if date is not related in input file
@@ -594,6 +603,7 @@ def run_locationId_r_stella(
             is_fungicide=is_fungicide,
             fungicide=fungicide,
             fungicide_residual=fungicide_residual,
+            obs_planting_delta=obs_planting_delta
         )
         # Output information
         start_date = one_field_weather["date"].iloc[0]
@@ -617,6 +627,40 @@ def run_locationId_r_stella(
             result_location["AUC"] = np.trapz(nonzero_sev)
         else:
             result_location["AUC"] = 0
+            
+        result_location["maxtempMAX"] = one_field_weather["maxtemp"].max()
+        result_location["maxtempMIN"] = one_field_weather["maxtemp"].min()
+        result_location["maxtempMEAN"] = one_field_weather["maxtemp"].mean()        
+        result_location["maxtempGREATER40"] = (one_field_weather["maxtemp"] >= 40).sum() 
+        
+        result_location["mintempMAX"] = one_field_weather["mintemp"].max()
+        result_location["mintempMIN"] = one_field_weather["mintemp"].min()
+        result_location["mintempMEAN"] = one_field_weather["mintemp"].mean()        
+        result_location["mintempSMALLER10"] = (one_field_weather["mintemp"] <= 10).sum()
+        
+        result_location["TemperatureMAX"] = one_field_weather["Temperature"].max()
+        result_location["TemperatureMIN"] = one_field_weather["Temperature"].min()
+        result_location["TemperatureMEAN"] = one_field_weather["Temperature"].mean()
+
+        result_location["avgwindspeedMAX"] = one_field_weather["avgwindspeed"].max()
+        result_location["avgwindspeedMIN"] = one_field_weather["avgwindspeed"].min()
+        result_location["avgwindspeedMEAN"] = one_field_weather["avgwindspeed"].mean()
+        
+        result_location["precipMAX"] = one_field_weather["precip"].max()
+        result_location["precipSUM"] = one_field_weather["precip"].sum()
+        result_location["precipMEAN"] = one_field_weather["precip"].mean()        
+        result_location["precipGREATER4mm"] = (one_field_weather["precip"] >= 4).sum()
+        
+        
+        for col in field_results.columns:
+            result_location[f"{col}_MIN"] = field_results[col].min()
+            result_location[f"{col}_MEAN"] = field_results[col].mean()
+            result_location[f"{col}_MEDIAN"] = field_results[col].median()
+            result_location[f"{col}_MAX"] = field_results[col].max()
+    
+        
+        
         result_list.append(result_location)
+        
     results = pd.DataFrame.from_dict(result_list)
     return results

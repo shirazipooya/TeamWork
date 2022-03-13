@@ -57,13 +57,19 @@ fungicide_residual_soy = pd.read_excel(
 # Historical Data
 # read pre-calculated historical data (summarized) - for specific fields
 
-historical = pd.read_csv("final_us_not_inoc_modelinput_susc.csv",
+historical = pd.read_csv("Data.csv",
 #historical = pd.read_csv("Historical_Calculated_Data_Merged_Completed.csv",
 # historical = pd.read_csv(
 #     #INPUT_DATA_PATH + "Historical_Calculated_Data_Merged_Completed.csv",
 #     "s3://com.climate.production.users/team/science/modeling-science/corn/disease-risk-modeling/models/process-models/output/final_corn.csv",
     encoding="latin-1",
-    index_col=0,
+    # index_col=0,
+)
+
+
+info = pd.read_csv("Info.csv",
+    encoding="latin-1",
+    # index_col=0,
 )
 
 
@@ -89,9 +95,6 @@ genetic_mechanistic_list = [
     "Moderate",
     "Resistant",
 ]
-# Planting date
-#date_list = ["2018-10-31"]  # Only 2018 for now (original).
-date_list = ["2016-05-04"]
 
 # Run specific fields.
 fields_to_run = loc_historical_unique["Field"].unique()
@@ -105,11 +108,9 @@ fungicide_inputs_full["spray_eff"] = [0.5, 0.5, 0.5] # min 0, max 1
 
 ################### RUN MODEL #############################
 
-for crop_mechanistic, number_applications, genetic_mechanistic, date in itertools.product(
-    crop_mechanistic_list, number_applications_list, genetic_mechanistic_list, date_list
+for crop_mechanistic, number_applications, genetic_mechanistic in itertools.product(
+    crop_mechanistic_list, number_applications_list, genetic_mechanistic_list
 ):
-    print(crop_mechanistic, number_applications, genetic_mechanistic, date)
-
     # Generate fungicide application table.
     if number_applications > 0:
         # Filter to only the fungicide applications used.
@@ -163,24 +164,31 @@ for crop_mechanistic, number_applications, genetic_mechanistic, date in itertool
             "GDU",
         ]
     ]
-
-    historical_input_blizz_prev_modified = historical_input_blizz_prev.copy()
-    historical_input_blizz_prev_modified["date"] = (
-        pd.to_datetime(historical_input_blizz_prev_modified["date"]) + pd.Timedelta(365, "d")
-    ).dt.strftime("%Y%m%d")
-    historical_input_blizz = pd.concat(
-        [historical_input_blizz_prev, historical_input_blizz_prev_modified],
-        axis=0,
-        ignore_index=True,
-    )
+    
+    historical_input_blizz_raw = historical_input_blizz_prev.copy()
+    historical_input_blizz = historical_input_blizz_prev.copy()    
+    number_of_repeat_year = 4
+    
+    for i in range(1, number_of_repeat_year + 1):
+        
+        historical_input_blizz_prev_modified = historical_input_blizz_raw.copy()
+        
+        historical_input_blizz_prev_modified["date"] = (
+            pd.to_datetime(historical_input_blizz_prev_modified["date"]) + pd.Timedelta(i * 365, "d")
+        ).dt.strftime("%Y%m%d")
+        
+        historical_input_blizz = pd.concat(
+            [historical_input_blizz, historical_input_blizz_prev_modified],
+            axis=0,
+            ignore_index=True,
+        )
+    
     historical_input_blizz = historical_input_blizz.drop_duplicates(subset=["locationId", "date"])
-
-    stella_date = datetime.datetime.strptime(date, "%Y-%m-%d").strftime("%Y%m%d")
 
     if crop_mechanistic == "Corn":
         results = run_locationId_r_stella(
             all_fields_weather=historical_input_blizz,
-            date=stella_date,
+            info=info,
             ip_t_cof=ip_t_cof_corn,
             p_t_cof=p_t_cof_corn,
             rc_t_input=rc_t_input_corn,
@@ -202,7 +210,7 @@ for crop_mechanistic, number_applications, genetic_mechanistic, date in itertool
     else:
         results = run_locationId_r_stella(
             all_fields_weather=historical_input_blizz,
-            date=stella_date,
+            info=info,
             ip_t_cof=ip_t_cof_soy,
             p_t_cof=p_t_cof_soy,
             rc_t_input=rc_t_input_soy,
@@ -234,7 +242,8 @@ for crop_mechanistic, number_applications, genetic_mechanistic, date in itertool
         else ""
     )
 
-    csv_path = f"./results/{crop_mechanistic}_{number_applications}-app{spray_code}_{genetic_mechanistic}_{date}.csv"
+    # csv_path = f"./results/{crop_mechanistic}_{number_applications}-app{spray_code}_{genetic_mechanistic}_{date}.csv"
+    csv_path = f"./results/{crop_mechanistic}_{number_applications}-app{spray_code}_{genetic_mechanistic}.csv"
     # csv_path = f"{OUTPUT_DATA_PATH}{crop_mechanistic}_{number_applications}-app{spray_code}_{genetic_mechanistic}_{date}.csv"
     
     print(csv_path)
