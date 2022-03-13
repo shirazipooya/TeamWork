@@ -12,7 +12,7 @@ import pandas as pd
 def location_data(
     data_path: str,
     info_path: str,
-    add_year: bool = True
+    number_of_repeat_year: int = 1
 ) -> pd.DataFrame:
     
     info = pd.read_csv(
@@ -51,12 +51,14 @@ def location_data(
         
         df["time"] = (df["DOY"] + model_origin).dt.strftime('%Y-%m-%d')
         
-        if add_year:
+        df_new_raw = df.copy()
+        
+        for i in range(1, number_of_repeat_year + 1):
             
-            df_new = df.copy()
+            df_new = df_new_raw.copy()            
             
             df_new["time"] = (
-                pd.to_datetime(df_new["time"]) + pd.Timedelta(365, "d")
+                pd.to_datetime(df_new["time"]) + pd.Timedelta(i * 365, "d")
             ).dt.strftime("%Y-%m-%d")
             
             df = pd.concat([df, df_new], axis=0, ignore_index=True)

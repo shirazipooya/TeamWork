@@ -10,7 +10,7 @@ classifiers = [
  
 setup(
     name='EDS',
-    version='0.2',
+    version='0.4',
     description='EDS FOR ORIGINAL CODE',
     long_description=open('README.txt').read() + '\n\n' + open('CHANGELOG.txt').read(),
     url='',  

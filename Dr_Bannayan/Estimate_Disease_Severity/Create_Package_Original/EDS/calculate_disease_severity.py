@@ -18,7 +18,7 @@ def calculate_disease_severity(
     
     data_path: str,
     info_path: str,
-    add_year: bool = True,
+    number_of_repeat_year: int = 1,
     
     crop_mechanistic: List[str] = None,   
     crop_parameters_path: List[str] = None,
@@ -38,7 +38,7 @@ def calculate_disease_severity(
     data = location_data(
         data_path = data_path,
         info_path = info_path,
-        add_year = add_year
+        number_of_repeat_year = number_of_repeat_year
     )
 
     crop_para = corp_parameters(
