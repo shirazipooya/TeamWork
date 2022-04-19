@@ -49,7 +49,7 @@ def blizzard_2_legacy(df: pd.DataFrame, crop: str) -> pd.DataFrame:
         df["GDU"] = df["GDU"].clip(10, 30)
     elif crop == "Soy":
         df["GDU"] = (df["maxtemp"] + df["mintemp"]) / 2 - 14.0
-        # df["GDU"] = df["GDU"].clip(14, 40)  # TODO: Check why this is commented out!
+        df["GDU"] = df["GDU"].clip(14, 40)  # TODO: Check why this is commented out!
     df = df[df["GDU"].notnull()]
     # TODO: Aren't GDUs recalculated later? This may be unnecessary here.
 

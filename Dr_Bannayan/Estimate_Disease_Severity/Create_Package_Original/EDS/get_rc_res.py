@@ -11,7 +11,7 @@ def get_rc_res(
     day: int, 
     fungicide: pd.DataFrame, 
     residual: pd.DataFrame
-) -> float:
+):
     """
     Calculate Fungicide effective residual?
 

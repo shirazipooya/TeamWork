@@ -28,19 +28,11 @@ from disease_mechanistic_functions_original import blizzard_2_legacy, run_locati
 # Corn tuning parameters
 ip_t_cof_corn = pd.read_excel("Parameters_Corn.xlsx", engine="openpyxl", sheet_name=0, header=None)
 p_t_cof_corn = pd.read_excel("Parameters_Corn.xlsx", engine="openpyxl", sheet_name=1, header=None)
-rc_t_input_corn = pd.read_excel(
-    "Parameters_Corn.xlsx", engine="openpyxl", sheet_name=2, header=None
-)
-dvs_8_input_corn = pd.read_excel(
-    "Parameters_Corn.xlsx", engine="openpyxl", sheet_name=3, header=None
-)
-rc_a_input_corn = pd.read_excel(
-    "Parameters_Corn.xlsx", engine="openpyxl", sheet_name=4, header=None
-)
+rc_t_input_corn = pd.read_excel("Parameters_Corn.xlsx", engine="openpyxl", sheet_name=2, header=None)
+dvs_8_input_corn = pd.read_excel("Parameters_Corn.xlsx", engine="openpyxl", sheet_name=3, header=None)
+rc_a_input_corn = pd.read_excel("Parameters_Corn.xlsx", engine="openpyxl", sheet_name=4, header=None)
 fungicide_corn = pd.read_excel("Parameters_Corn.xlsx", engine="openpyxl", sheet_name=6, header=None)
-fungicide_residual_corn = pd.read_excel(
-    "Parameters_Corn.xlsx", engine="openpyxl", sheet_name=7, header=None
-)
+fungicide_residual_corn = pd.read_excel("Parameters_Corn.xlsx", engine="openpyxl", sheet_name=7, header=None)
 
 # Soybean tuning parameters
 ip_t_cof_soy = pd.read_excel("Parameters_Soy.xlsx", engine="openpyxl", sheet_name=0, header=None)
@@ -49,9 +41,7 @@ rc_t_input_soy = pd.read_excel("Parameters_Soy.xlsx", engine="openpyxl", sheet_n
 dvs_8_input_soy = pd.read_excel("Parameters_Soy.xlsx", engine="openpyxl", sheet_name=3, header=None)
 rc_a_input_soy = pd.read_excel("Parameters_Soy.xlsx", engine="openpyxl", sheet_name=4, header=None)
 fungicide_soy = pd.read_excel("Parameters_Soy.xlsx", engine="openpyxl", sheet_name=6, header=None)
-fungicide_residual_soy = pd.read_excel(
-    "Parameters_Soy.xlsx", engine="openpyxl", sheet_name=7, header=None
-)
+fungicide_residual_soy = pd.read_excel("Parameters_Soy.xlsx", engine="openpyxl", sheet_name=7, header=None)
 
 
 # Historical Data
@@ -85,9 +75,9 @@ crop_mechanistic_list = [
 ]
 number_applications_list = [
     0,
-    1,
-    2,
-    3,
+    # 1,
+    # 2,
+    # 3,
 ]  # 0 - 5
 
 genetic_mechanistic_list = [
@@ -197,7 +187,7 @@ for crop_mechanistic, number_applications, genetic_mechanistic in itertools.prod
             p_opt=p_opt,
             inocp=10,
             rrlex_par=rrlex_par,
-            rc_opt_par=0.267,
+            rc_opt_par=rc_opt_par,
             ip_opt=14,
             is_fungicide=using_fungicide,
             fungicide=fungicide_inputs,
@@ -218,7 +208,7 @@ for crop_mechanistic, number_applications, genetic_mechanistic in itertools.prod
             dvs_8_input=dvs_8_input_soy,
             p_opt=p_opt,
             inocp=10,
-            rrlex_par=0.01,
+            rrlex_par=rrlex_par,
             rc_opt_par=rc_opt_par,
             ip_opt=28,
             is_fungicide=using_fungicide,

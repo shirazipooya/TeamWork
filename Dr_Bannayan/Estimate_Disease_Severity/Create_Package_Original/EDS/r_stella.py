@@ -29,7 +29,8 @@ def r_stella(
     fungicide: pd.DataFrame = pd.DataFrame(),
     fungicide_residual: pd.DataFrame = pd.DataFrame(),
     days_after_planting: int = 140
-) -> Tuple[pd.DataFrame, int]:
+):
+    
     """
     Calculates disease severity from weather data and crop-specific tuning parameters.
     # TODO: Link to documentation.

@@ -11,7 +11,7 @@ import pandas as pd
 def calc_rain_score(
     day: int,
     one_field_precip_bool: pd.Series
-) -> int:
+):
     
     """
     Calculates a Score (1-4) of Antecedent Rain Conditions.
