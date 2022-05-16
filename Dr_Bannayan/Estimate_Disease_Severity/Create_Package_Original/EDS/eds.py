@@ -13,7 +13,7 @@ from .get_rc_res import *
 from .get_spray import *
 
 
-def r_stella(
+def eds(
     one_field_weather: pd.DataFrame,
     ip_t_cof: pd.DataFrame,
     p_t_cof: pd.DataFrame,

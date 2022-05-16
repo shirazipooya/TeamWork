@@ -12,21 +12,24 @@ import itertools
 
 from .location_data import *
 from .corp_parameters import *
-from .r_stella import *
+from .eds import *
 
 def calculate_disease_severity(
     
     data_path: str,
     info_path: str,
     number_of_repeat_year: int = 1,
-    
-    crop_mechanistic: List[str] = None,   
-    crop_parameters_path: List[str] = None,
        
     number_applications_list: List[int] = [0, 1, 2, 3],
     genetic_mechanistic_list: List[str] = ["Susceptible", "Moderate", "Resistant"],
     
     required_para = None,
+    
+    user_crop_parameters: bool = False,    
+    crop_mechanistic: List[str] = None,   
+    crop_parameters_path: List[str] = None,
+    
+    output_columns: List[str] = ["Sev50%", "SevMAX", "AUC"],
     
     path_result = None
 ):
@@ -40,11 +43,14 @@ def calculate_disease_severity(
         info_path = info_path,
         number_of_repeat_year = number_of_repeat_year
     )
-
-    crop_para = corp_parameters(
-        crop_mechanistic = crop_mechanistic,
-        crop_parameters_path = crop_parameters_path,
-    )
+    
+    if user_crop_parameters:
+        crop_para = corp_parameters(
+            crop_mechanistic = crop_mechanistic,
+            crop_parameters_path = crop_parameters_path,
+        )
+    else:
+        crop_para = CROP_PARAMETERS
 
     for id in data["info_id"].unique():
         df = data[data["info_id"] == id]
@@ -72,7 +78,7 @@ def calculate_disease_severity(
             ).dt.days + 1
             
             
-            field_results, n_day = r_stella(
+            field_results, n_day = eds(
                 one_field_weather=df,
                 ip_t_cof=crop_para_selected["ip_t_cof"],
                 p_t_cof=crop_para_selected["p_t_cof"],
@@ -122,6 +128,8 @@ def calculate_disease_severity(
     all_results.sort_values(
         by=["locationId", "crop", "Date1", "number_applications", "genetic_mechanistic"],
         inplace=True
-    )
+    )    
+    
+    all_results = all_results[["locationId", "Date1", "Date2", "N_Days", "latitude", "longitude", "number_applications", "genetic_mechanistic", "crop"] + output_columns]   
     
     return all_results
